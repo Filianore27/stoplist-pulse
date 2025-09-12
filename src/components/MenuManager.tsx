@@ -14,6 +14,7 @@ interface MenuItem {
   price: number;
   isAvailable: boolean;
   description?: string;
+  image?: string;
 }
 
 interface MenuManagerProps {
@@ -24,16 +25,16 @@ interface MenuManagerProps {
 
 // Мок-данные для демонстрации
 const mockMenuItems: MenuItem[] = [
-  { id: "1", name: "Борщ украинский", category: "Супы", price: 450, isAvailable: true, description: "С говядиной и сметаной" },
-  { id: "2", name: "Солянка мясная", category: "Супы", price: 520, isAvailable: false },
-  { id: "3", name: "Цезарь с курицей", category: "Салаты", price: 680, isAvailable: true },
-  { id: "4", name: "Греческий салат", category: "Салаты", price: 590, isAvailable: true },
-  { id: "5", name: "Стейк из говядины", category: "Горячее", price: 1850, isAvailable: false },
-  { id: "6", name: "Филе лосося", category: "Горячее", price: 1420, isAvailable: true },
-  { id: "7", name: "Паста карбонара", category: "Горячее", price: 780, isAvailable: true },
-  { id: "8", name: "Тирамису", category: "Десерты", price: 420, isAvailable: true },
-  { id: "9", name: "Чизкейк", category: "Десерты", price: 380, isAvailable: false },
-  { id: "10", name: "Брускетта", category: "Закуски", price: 320, isAvailable: true },
+  { id: "1", name: "Борщ украинский", category: "Супы", price: 450, isAvailable: true, description: "С говядиной и сметаной", image: "/api/placeholder/120/80" },
+  { id: "2", name: "Солянка мясная", category: "Супы", price: 520, isAvailable: false, image: "/api/placeholder/120/80" },
+  { id: "3", name: "Цезарь с курицей", category: "Салаты", price: 680, isAvailable: true, image: "/api/placeholder/120/80" },
+  { id: "4", name: "Греческий салат", category: "Салаты", price: 590, isAvailable: true, image: "/api/placeholder/120/80" },
+  { id: "5", name: "Стейк из говядины", category: "Горячее", price: 1850, isAvailable: false, image: "/api/placeholder/120/80" },
+  { id: "6", name: "Филе лосося", category: "Горячее", price: 1420, isAvailable: true, image: "/api/placeholder/120/80" },
+  { id: "7", name: "Паста карбонара", category: "Горячее", price: 780, isAvailable: true, image: "/api/placeholder/120/80" },
+  { id: "8", name: "Тирамису", category: "Десерты", price: 420, isAvailable: true, image: "/api/placeholder/120/80" },
+  { id: "9", name: "Чизкейк", category: "Десерты", price: 380, isAvailable: false, image: "/api/placeholder/120/80" },
+  { id: "10", name: "Брускетта", category: "Закуски", price: 320, isAvailable: true, image: "/api/placeholder/120/80" },
 ];
 
 export const MenuManager = ({ restaurantName, onBack }: MenuManagerProps) => {
@@ -70,6 +71,25 @@ export const MenuManager = ({ restaurantName, onBack }: MenuManagerProps) => {
       }
       return item;
     }));
+  };
+
+  const toggleCategoryStatus = (category: string) => {
+    const categoryItems = menuItems.filter(item => item.category === category);
+    const hasAvailableItems = categoryItems.some(item => item.isAvailable);
+    const newStatus = !hasAvailableItems;
+    
+    setMenuItems(prev => prev.map(item => {
+      if (item.category === category) {
+        return { ...item, isAvailable: newStatus };
+      }
+      return item;
+    }));
+
+    toast({
+      title: newStatus ? "Категория добавлена" : "Категория убрана в стоп",
+      description: `Все блюда в категории "${category}" ${newStatus ? "теперь доступны" : "временно недоступны"}`,
+      variant: newStatus ? "default" : "destructive",
+    });
   };
 
   const availableCount = menuItems.filter(item => item.isAvailable).length;
@@ -129,70 +149,115 @@ export const MenuManager = ({ restaurantName, onBack }: MenuManagerProps) => {
 
         {/* Menu Categories */}
         <div className="space-y-6">
-          {Object.entries(groupedItems).map(([category, items]) => (
-            <Card key={category} className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl text-foreground flex items-center justify-between">
-                  {category}
-                  <Badge variant="secondary" className="bg-muted/50">
-                    {items.length}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              
-              <CardContent className="space-y-3">
-                {items.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all duration-300 ${
-                      item.isAvailable
-                        ? "bg-success-light/30 border-success/20 hover:border-success/40"
-                        : "bg-warning-light/30 border-warning/20 hover:border-warning/40"
-                    }`}
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-1">
-                        <h3 className={`font-medium ${
-                          item.isAvailable ? "text-foreground" : "text-muted-foreground line-through"
-                        }`}>
-                          {item.name}
-                        </h3>
-                        {item.isAvailable ? (
-                          <CheckCircle className="w-4 h-4 text-success" />
-                        ) : (
-                          <XCircle className="w-4 h-4 text-warning" />
-                        )}
-                      </div>
-                      
-                      {item.description && (
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {item.description}
-                        </p>
-                      )}
-                      
-                      <p className="text-lg font-semibold text-primary">
-                        {item.price}₽
-                      </p>
+          {Object.entries(groupedItems).map(([category, items]) => {
+            const categoryAvailableCount = items.filter(item => item.isAvailable).length;
+            const categoryTotalCount = items.length;
+            const hasAvailableItems = categoryAvailableCount > 0;
+            
+            return (
+              <Card key={category} className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <CardTitle className="text-xl text-foreground">
+                        {category}
+                      </CardTitle>
+                      <Badge variant="secondary" className="bg-muted/50">
+                        {categoryAvailableCount}/{categoryTotalCount}
+                      </Badge>
                     </div>
                     
-                    <div className="flex items-center gap-3 ml-4">
-                      <span className={`text-sm font-medium ${
-                        item.isAvailable ? "text-success" : "text-warning"
-                      }`}>
-                        {item.isAvailable ? "Доступно" : "Стоп"}
-                      </span>
-                      
-                      <Switch
-                        checked={item.isAvailable}
-                        onCheckedChange={() => toggleItemStatus(item.id)}
-                        className="data-[state=checked]:bg-success"
-                      />
-                    </div>
+                    <Button
+                      variant={hasAvailableItems ? "destructive" : "default"}
+                      size="sm"
+                      onClick={() => toggleCategoryStatus(category)}
+                      className={`transition-all duration-300 ${
+                        hasAvailableItems 
+                          ? "bg-warning hover:bg-warning/90 text-warning-foreground" 
+                          : "bg-success hover:bg-success/90 text-success-foreground"
+                      }`}
+                    >
+                      {hasAvailableItems ? "Убрать категорию в стоп" : "Вернуть категорию"}
+                    </Button>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          ))}
+                </CardHeader>
+                
+                <CardContent className="space-y-3">
+                  {items.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-300 ${
+                        item.isAvailable
+                          ? "bg-success-light/30 border-success/20 hover:border-success/40"
+                          : "bg-warning-light/30 border-warning/20 hover:border-warning/40"
+                      }`}
+                    >
+                      {/* Image */}
+                      <div className="flex-shrink-0">
+                        <div className="w-20 h-16 rounded-lg overflow-hidden bg-muted/50 border border-border/50">
+                          {item.image ? (
+                            <img
+                              src={item.image}
+                              alt={item.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='80' viewBox='0 0 120 80'%3E%3Crect width='120' height='80' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='12' fill='%23666'%3E🍽️%3C/text%3E%3C/svg%3E";
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                              <ChefHat className="w-6 h-6" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-1">
+                          <h3 className={`font-medium truncate ${
+                            item.isAvailable ? "text-foreground" : "text-muted-foreground line-through"
+                          }`}>
+                            {item.name}
+                          </h3>
+                          {item.isAvailable ? (
+                            <CheckCircle className="w-4 h-4 text-success flex-shrink-0" />
+                          ) : (
+                            <XCircle className="w-4 h-4 text-warning flex-shrink-0" />
+                          )}
+                        </div>
+                        
+                        {item.description && (
+                          <p className="text-sm text-muted-foreground mb-2 line-clamp-1">
+                            {item.description}
+                          </p>
+                        )}
+                        
+                        <p className="text-lg font-semibold text-primary">
+                          {item.price}₽
+                        </p>
+                      </div>
+                      
+                      {/* Toggle */}
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <span className={`text-sm font-medium ${
+                          item.isAvailable ? "text-success" : "text-warning"
+                        }`}>
+                          {item.isAvailable ? "Доступно" : "Стоп"}
+                        </span>
+                        
+                        <Switch
+                          checked={item.isAvailable}
+                          onCheckedChange={() => toggleItemStatus(item.id)}
+                          className="data-[state=checked]:bg-success"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {filteredItems.length === 0 && (
