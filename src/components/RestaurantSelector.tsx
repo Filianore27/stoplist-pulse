@@ -36,7 +36,7 @@ export const RestaurantSelector = ({ onSelect }: RestaurantSelectorProps) => {
             Выберите ресторан
           </h1>
           <p className="text-muted-foreground">
-            Выберите точку для управления в Relay Control
+            Выберите точку для управления в relay.control
           </p>
         </div>
 
