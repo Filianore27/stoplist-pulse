@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Store, ArrowRight, MapPin } from "lucide-react";
+import { Store, ArrowRight, MapPin, LogOut } from "lucide-react";
 
 interface Restaurant {
   id: string;
@@ -12,6 +12,7 @@ interface Restaurant {
 interface RestaurantSelectorProps {
   restaurants: Restaurant[];
   onSelect: (restaurantId: string) => void;
+  onLogout: () => void;
 }
 
 // Мок-данные для демонстрации
@@ -22,13 +23,24 @@ const mockRestaurants: Restaurant[] = [
   { id: "4", name: "Ресторан Семейный", address: "ул. Пушкина, 23", isActive: true },
 ];
 
-export const RestaurantSelector = ({ onSelect }: RestaurantSelectorProps) => {
+export const RestaurantSelector = ({ onSelect, onLogout }: RestaurantSelectorProps) => {
   const restaurants = mockRestaurants;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/20 to-primary/5 p-4">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8 pt-8">
+          <div className="flex justify-end mb-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onLogout}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Выйти
+            </Button>
+          </div>
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary to-primary-glow rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-primary/20">
             <Store className="w-8 h-8 text-primary-foreground" />
           </div>

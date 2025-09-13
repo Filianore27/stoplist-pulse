@@ -4,7 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Search, ChefHat, Clock, CheckCircle, XCircle, ArrowLeft, Save } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Search, ChefHat, Clock, CheckCircle, XCircle, ArrowLeft, Save, Plus, FolderPlus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface MenuItem {
@@ -15,6 +17,12 @@ interface MenuItem {
   isAvailable: boolean;
   description?: string;
   image?: string;
+}
+
+interface CustomCategory {
+  id: string;
+  name: string;
+  itemIds: string[];
 }
 
 interface MenuManagerProps {
@@ -40,8 +48,14 @@ const mockMenuItems: MenuItem[] = [
 export const MenuManager = ({ restaurantName, onBack }: MenuManagerProps) => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>(mockMenuItems);
   const [originalItems, setOriginalItems] = useState<MenuItem[]>(mockMenuItems);
+  const [customCategories, setCustomCategories] = useState<CustomCategory[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
+  
+  // Состояние для создания кастомной категории
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   const filteredItems = useMemo(() => {
     return menuItems.filter(item =>
@@ -51,14 +65,65 @@ export const MenuManager = ({ restaurantName, onBack }: MenuManagerProps) => {
 
   const groupedItems = useMemo(() => {
     const groups: { [key: string]: MenuItem[] } = {};
+    
+    // Добавляем обычные категории
     filteredItems.forEach(item => {
       if (!groups[item.category]) {
         groups[item.category] = [];
       }
       groups[item.category].push(item);
     });
+    
+    // Добавляем кастомные категории
+    customCategories.forEach(customCat => {
+      const categoryItems = menuItems.filter(item => 
+        customCat.itemIds.includes(item.id) && 
+        item.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      if (categoryItems.length > 0) {
+        groups[`🔥 ${customCat.name}`] = categoryItems;
+      }
+    });
+    
     return groups;
-  }, [filteredItems]);
+  }, [filteredItems, customCategories, menuItems, searchTerm]);
+
+  const createCustomCategory = () => {
+    if (!newCategoryName.trim() || selectedItems.length === 0) {
+      toast({
+        title: "Ошибка создания",
+        description: "Введите название категории и выберите блюда",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newCategory: CustomCategory = {
+      id: `custom-${Date.now()}`,
+      name: newCategoryName,
+      itemIds: [...selectedItems]
+    };
+
+    setCustomCategories(prev => [...prev, newCategory]);
+    setNewCategoryName("");
+    setSelectedItems([]);
+    setIsCreateDialogOpen(false);
+    setHasChanges(true);
+
+    toast({
+      title: "Категория создана",
+      description: `Создана кастомная категория "${newCategoryName}"`,
+    });
+  };
+
+  const deleteCustomCategory = (categoryId: string) => {
+    setCustomCategories(prev => prev.filter(cat => cat.id !== categoryId));
+    setHasChanges(true);
+    toast({
+      title: "Категория удалена",
+      description: "Кастомная категория была удалена",
+    });
+  };
 
   const toggleItemStatus = (itemId: string) => {
     setMenuItems(prev => prev.map(item => {
@@ -72,16 +137,35 @@ export const MenuManager = ({ restaurantName, onBack }: MenuManagerProps) => {
   };
 
   const toggleCategoryStatus = (category: string) => {
-    const categoryItems = menuItems.filter(item => item.category === category);
-    const hasAvailableItems = categoryItems.some(item => item.isAvailable);
-    const newStatus = !hasAvailableItems;
-    
-    setMenuItems(prev => prev.map(item => {
-      if (item.category === category) {
-        return { ...item, isAvailable: newStatus };
+    // Проверяем, кастомная ли это категория
+    if (category.startsWith('🔥 ')) {
+      const customCatName = category.replace('🔥 ', '');
+      const customCategory = customCategories.find(cat => cat.name === customCatName);
+      if (customCategory) {
+        const categoryItems = menuItems.filter(item => customCategory.itemIds.includes(item.id));
+        const hasAvailableItems = categoryItems.some(item => item.isAvailable);
+        const newStatus = !hasAvailableItems;
+        
+        setMenuItems(prev => prev.map(item => {
+          if (customCategory.itemIds.includes(item.id)) {
+            return { ...item, isAvailable: newStatus };
+          }
+          return item;
+        }));
       }
-      return item;
-    }));
+    } else {
+      // Обычная категория
+      const categoryItems = menuItems.filter(item => item.category === category);
+      const hasAvailableItems = categoryItems.some(item => item.isAvailable);
+      const newStatus = !hasAvailableItems;
+      
+      setMenuItems(prev => prev.map(item => {
+        if (item.category === category) {
+          return { ...item, isAvailable: newStatus };
+        }
+        return item;
+      }));
+    }
     setHasChanges(true);
   };
 
@@ -172,6 +256,74 @@ export const MenuManager = ({ restaurantName, onBack }: MenuManagerProps) => {
                   </Button>
                 </div>
               )}
+
+              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-primary hover:text-primary hover:bg-primary/10"
+                  >
+                    <FolderPlus className="w-4 h-4 mr-2" />
+                    Создать категорию
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Создать кастомную категорию</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <Input
+                      placeholder="Название категории (например: Без света)"
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                    />
+                    
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      <p className="text-sm text-muted-foreground">Выберите блюда для категории:</p>
+                      {menuItems.map(item => (
+                        <div key={item.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={item.id}
+                            checked={selectedItems.includes(item.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedItems(prev => [...prev, item.id]);
+                              } else {
+                                setSelectedItems(prev => prev.filter(id => id !== item.id));
+                              }
+                            }}
+                          />
+                          <label htmlFor={item.id} className="text-sm flex-1 cursor-pointer">
+                            {item.name} ({item.category})
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="flex gap-2 pt-4">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setNewCategoryName("");
+                          setSelectedItems([]);
+                          setIsCreateDialogOpen(false);
+                        }}
+                        className="flex-1"
+                      >
+                        Отменить
+                      </Button>
+                      <Button
+                        onClick={createCustomCategory}
+                        disabled={!newCategoryName.trim() || selectedItems.length === 0}
+                        className="flex-1"
+                      >
+                        Создать
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </div>
@@ -200,6 +352,7 @@ export const MenuManager = ({ restaurantName, onBack }: MenuManagerProps) => {
             const categoryAvailableCount = items.filter(item => item.isAvailable).length;
             const categoryTotalCount = items.length;
             const hasAvailableItems = categoryAvailableCount > 0;
+            const isCustomCategory = category.startsWith('🔥 ');
             
             return (
               <Card key={category} className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
@@ -212,20 +365,44 @@ export const MenuManager = ({ restaurantName, onBack }: MenuManagerProps) => {
                       <Badge variant="secondary" className="bg-muted/50">
                         {categoryAvailableCount}/{categoryTotalCount}
                       </Badge>
+                      {isCustomCategory && (
+                        <Badge variant="outline" className="text-xs">
+                          Кастомная
+                        </Badge>
+                      )}
                     </div>
                     
-                    <Button
-                      variant={hasAvailableItems ? "destructive" : "default"}
-                      size="sm"
-                      onClick={() => toggleCategoryStatus(category)}
-                      className={`transition-all duration-300 text-xs sm:text-sm ${
-                        hasAvailableItems 
-                          ? "bg-warning hover:bg-warning/90 text-warning-foreground" 
-                          : "bg-success hover:bg-success/90 text-success-foreground"
-                      }`}
-                    >
-                      {hasAvailableItems ? "В стоп" : "Вернуть"}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={hasAvailableItems ? "destructive" : "default"}
+                        size="sm"
+                        onClick={() => toggleCategoryStatus(category)}
+                        className={`transition-all duration-300 text-xs sm:text-sm ${
+                          hasAvailableItems 
+                            ? "bg-warning hover:bg-warning/90 text-warning-foreground" 
+                            : "bg-success hover:bg-success/90 text-success-foreground"
+                        }`}
+                      >
+                        {hasAvailableItems ? "В стоп" : "Вернуть"}
+                      </Button>
+                      
+                      {isCustomCategory && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const customCatName = category.replace('🔥 ', '');
+                            const customCategory = customCategories.find(cat => cat.name === customCatName);
+                            if (customCategory) {
+                              deleteCustomCategory(customCategory.id);
+                            }
+                          }}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          Удалить
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 

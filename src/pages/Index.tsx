@@ -44,6 +44,11 @@ const Index = () => {
     setAppData(prev => ({ ...prev, restaurantId: undefined, restaurantName: undefined }));
   };
 
+  const handleLogout = () => {
+    setAppState("login");
+    setAppData({});
+  };
+
   if (appState === "login") {
     return <LoginForm onLogin={handleLogin} />;
   }
@@ -53,6 +58,7 @@ const Index = () => {
       <RestaurantSelector 
         restaurants={[]}
         onSelect={handleRestaurantSelect}
+        onLogout={handleLogout}
       />
     );
   }
